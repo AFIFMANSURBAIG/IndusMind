@@ -180,12 +180,27 @@
       max-height: 250px;
       animation: fadeIn 0.5s ease-out;
     }
+
+    .timestamp-info {
+      text-align: center;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+      border-radius: 10px;
+      margin-bottom: 20px;
+      color: #667eea;
+      font-weight: 600;
+      font-size: 0.95em;
+      border-left: 4px solid #667eea;
+      animation: fadeIn 0.5s ease-out;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <a href="/" class="back">← Back to Dashboard</a>
     <h1>Motor 2 - Live Sensor Data</h1>
+    
+    <div class="timestamp-info" id="timestamp-info">⏱️ Last update: --</div>
     
     <div class="stats">
       <div class="stat-box">
@@ -278,6 +293,19 @@
     };
 
     const charts = {};
+    let lastUpdateTime = 0;
+
+    function updateTimestampDisplay() {
+      if (lastUpdateTime === 0) {
+        document.getElementById('timestamp-info').innerText = '⏱️ Last update: Waiting for data...';
+        return;
+      }
+      const now = Date.now();
+      const elapsed = Math.floor((now - lastUpdateTime) / 1000);
+      const updateDate = new Date(lastUpdateTime);
+      const timeStr = updateDate.toLocaleTimeString();
+      document.getElementById('timestamp-info').innerText = `⏱️ Last update: ${timeStr} (${elapsed}s ago)`;
+    }
 
     function initCharts() {
       Object.keys(chartConfigs).forEach(chartId => {
@@ -322,6 +350,12 @@
         const res = await fetch("/api/motor/MOTOR_2");
         const data = await res.json();
         
+        // Update timestamp
+        if (data.timestamp) {
+          lastUpdateTime = data.timestamp;
+          updateTimestampDisplay();
+        }
+        
         // Update stats
         document.getElementById('stat-vib').innerText = data.vibration ?? '--';
         document.getElementById('stat-sound').innerText = data.sound ?? '--';
@@ -365,6 +399,7 @@
     initCharts();
     fetchData();
     setInterval(fetchData, 500);
+    setInterval(updateTimestampDisplay, 1000); // Update timestamp display every second
   </script>
 </body>
 </html>
