@@ -1,134 +1,76 @@
-const express = require("express");
-const cors = require("cors");
-const app = express();
-const PORT = process.env.PORT || 3000;
+import express from "express";
+import cors from "cors";
+import fetch from "node-fetch";
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-const dataStore = {
+const PORT = process.env.PORT || 3000;
+
+/* ===== STORE LATEST DATA ===== */
+const motors = {
   MOTOR_1: {},
   MOTOR_2: {}
 };
 
-// ESP32 sends data here
+/* ===== ESP32 DATA API ===== */
 app.post("/api/data", (req, res) => {
   const { device } = req.body;
-  if (!device) return res.status(400).send("No device");
+  if (!device) return res.sendStatus(400);
 
-  // store raw data and add server timestamp if missing
-  const payload = Object.assign({}, req.body);
-  if (!payload.timestamp) payload.timestamp = Date.now();
-  dataStore[device] = payload;
-  console.log("DATA:", payload);
+  motors[device] = req.body;
+  console.log("Data:", req.body);
 
-  // compute lightweight state for UI
-  try {
-    const t = Number(payload.temp);
-    const h = Number(payload.humidity);
-    const v = Number(payload.voltage);
-    let state = 'unknown';
-    if (!isNaN(t) && (t > 60 || h > 90)) state = 'warning';
-    else if (!isNaN(v) && v < 2.5) state = 'warning';
-    else state = 'ok';
-    dataStore[device].state = state;
-  } catch (e) {
-    dataStore[device].state = 'unknown';
-  }
-
-  // asynchronously send to AI (if configured) and store summary
-  (async () => {
-    try {
-      const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
-      const aiEnabled = process.env.AI_ENABLED === undefined ? true : (process.env.AI_ENABLED === 'true');
-      if (!apiKey || !aiEnabled) return;
-      const url = 'https://openrouter.ai/api/v1/chat/completions';
-      const sensorSummary = `Device ${payload.device} readings: vibration=${payload.vibration}, sound=${payload.sound}, voltage=${payload.voltage}, temp=${payload.temp}, humidity=${payload.humidity}.`;
-      const body = {
-        model: 'meta-llama/llama-3.3-70b-instruct:free',
-        messages: [
-          { role: 'system', content: 'You are an assistant that summarizes sensor data and suggests short actions.' },
-          { role: 'user', content: sensorSummary + ' Provide a one-sentence summary and a short status (ok/warning).' }
-        ],
-        max_tokens: 200
-      };
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify(body)
-      });
-      if (!r.ok) return;
-      const j = await r.json();
-      const reply = j?.choices?.[0]?.message?.content || j?.choices?.[0]?.text || null;
-      if (reply) dataStore[device].aiSummary = reply;
-    } catch (e) {
-      console.error('AI send error', e);
-    }
-  })();
-
-  res.send("OK");
+  res.sendStatus(200);
 });
 
-// Motor APIs
+/* ===== GET MOTOR DATA ===== */
 app.get("/api/motor/:id", (req, res) => {
-  res.json(dataStore[req.params.id] || {});
+  res.json(motors[req.params.id] || {});
 });
 
-// Pages
-app.get("/motor1", (req, res) =>
-  res.sendFile(__dirname + "/public/motor1.html")
-);
-app.get("/motor2", (req, res) =>
-  res.sendFile(__dirname + "/public/motor2.html")
-);
+/* ===== AI CHAT API ===== */
+app.post("/api/chat", async (req, res) => {
+  const { question, motor } = req.body;
+  const data = motors[motor] || {};
 
-// Chat endpoint: accept { device, message } and forward to OpenRouter, including last snapshot
-app.post('/api/chat', async (req, res) => {
-  const { device, message } = req.body || {};
-  if (!device || !message) return res.status(400).json({ error: 'device and message required' });
-  const snapshot = dataStore[device] || {};
-  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
-  const aiEnabled = process.env.AI_ENABLED === undefined ? true : (process.env.AI_ENABLED === 'true');
-  if (!apiKey || !aiEnabled) return res.status(500).json({ error: 'AI not available (missing API key or AI_ENABLED=false)' });
+  const prompt = `
+Motor: ${motor}
+Vibration: ${data.vibration}
+Sound: ${data.sound}
+Voltage: ${data.voltage}
+Temperature: ${data.temp}
+Humidity: ${data.humidity}
+
+User question: ${question}
+Give short industrial-level answer.
+`;
 
   try {
-    const url = 'https://openrouter.ai/api/v1/chat/completions';
-    const system = `You are an assistant for motor monitoring. Use the following latest sensor snapshot to inform your answers: ${JSON.stringify(snapshot)}.`;
-    const body = {
-      model: 'meta-llama/llama-3.3-70b-instruct:free',
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: message }
-      ],
-      max_tokens: 400
-    };
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://indusmind-3nfv.onrender.com",
+          "X-Title": "IndusMind"
+        },
+        body: JSON.stringify({
+          model: "meta-llama/llama-3.3-70b-instruct:free",
+          messages: [{ role: "user", content: prompt }]
+        })
+      }
+    );
 
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify(body)
-    });
+    const result = await response.json();
+    res.json({ answer: result.choices[0].message.content });
 
-    if (!r.ok) {
-      const status = r.status;
-      const statusText = r.statusText || '';
-      const txt = await r.text();
-      let parsed = null;
-      try { parsed = JSON.parse(txt); } catch (e) { parsed = txt; }
-      // Return helpful diagnostics without exposing the API key
-      return res.status(500).json({
-        error: 'AI upstream error',
-        upstream: { status, statusText, body: parsed }
-      });
-    }
-
-    const j = await r.json();
-    const reply = j?.choices?.[0]?.message?.content || j?.choices?.[0]?.text || 'No reply';
-    return res.json({ reply });
   } catch (err) {
-    console.error('chat error', err);
-    return res.status(500).json({ error: 'server error', message: err.message });
+    res.status(500).json({ error: "AI failed" });
   }
 });
 
