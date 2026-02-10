@@ -49,12 +49,17 @@ Give short industrial-level answer.
 `;
 
   try {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "OPENROUTER_API_KEY not configured" });
+    }
+
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": "https://indusmind-3nfv.onrender.com",
           "X-Title": "IndusMind"
@@ -66,11 +71,26 @@ Give short industrial-level answer.
       }
     );
 
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("OpenRouter error:", response.status, text);
+      return res.status(500).json({ 
+        error: "OpenRouter API error",
+        status: response.status,
+        details: text.substring(0, 200)
+      });
+    }
+
     const result = await response.json();
-    res.json({ answer: result.choices[0].message.content });
+    const answer = result?.choices?.[0]?.message?.content;
+    if (!answer) {
+      return res.status(500).json({ error: "No answer from AI" });
+    }
+    res.json({ answer });
 
   } catch (err) {
-    res.status(500).json({ error: "AI failed" });
+    console.error("Chat error:", err);
+    res.status(500).json({ error: "AI failed", message: err.message });
   }
 });
 
