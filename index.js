@@ -33,6 +33,8 @@ app.get("/api/motor/:id", (req, res) => {
 
 /* ===== AI CHAT API ===== */
 app.post("/api/chat", async (req, res) => {
+  console.log("Chat request received:", req.body);
+  
   const { question, motor } = req.body;
   const data = motors[motor] || {};
 
@@ -50,10 +52,14 @@ Give short industrial-level answer.
 
   try {
     const apiKey = process.env.OPENROUTER_API_KEY;
+    console.log("API Key present:", !!apiKey);
+    
     if (!apiKey) {
+      console.log("Missing API key");
       return res.status(500).json({ error: "OPENROUTER_API_KEY not configured" });
     }
 
+    console.log("Calling OpenRouter...");
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -71,6 +77,8 @@ Give short industrial-level answer.
       }
     );
 
+    console.log("Response status:", response.status);
+    
     if (!response.ok) {
       const text = await response.text();
       console.error("OpenRouter error:", response.status, text);
@@ -82,10 +90,14 @@ Give short industrial-level answer.
     }
 
     const result = await response.json();
+    console.log("OpenRouter result:", result);
+    
     const answer = result?.choices?.[0]?.message?.content;
     if (!answer) {
+      console.log("No answer in response");
       return res.status(500).json({ error: "No answer from AI" });
     }
+    
     res.json({ answer });
 
   } catch (err) {
