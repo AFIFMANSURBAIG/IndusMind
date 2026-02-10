@@ -111,8 +111,16 @@ app.post('/api/chat', async (req, res) => {
     });
 
     if (!r.ok) {
+      const status = r.status;
+      const statusText = r.statusText || '';
       const txt = await r.text();
-      return res.status(500).json({ error: 'AI error', details: txt });
+      let parsed = null;
+      try { parsed = JSON.parse(txt); } catch (e) { parsed = txt; }
+      // Return helpful diagnostics without exposing the API key
+      return res.status(500).json({
+        error: 'AI upstream error',
+        upstream: { status, statusText, body: parsed }
+      });
     }
 
     const j = await r.json();
@@ -120,7 +128,7 @@ app.post('/api/chat', async (req, res) => {
     return res.json({ reply });
   } catch (err) {
     console.error('chat error', err);
-    return res.status(500).json({ error: 'server error' });
+    return res.status(500).json({ error: 'server error', message: err.message });
   }
 });
 
