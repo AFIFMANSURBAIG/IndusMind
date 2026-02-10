@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>IndusMind – Motor 1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+<h1>🚀 IndusMind – MOTOR 1</h1>
+
+<p>Vibration: <span id="vib">--</span></p>
+<p>Sound: <span id="sound">--</span></p>
+<p>Voltage: <span id="volt">--</span></p>
+<p>Temperature: <span id="temp">--</span> °C</p>
+<p>Humidity: <span id="hum">--</span> %</p>
+
+<script>
+async function fetchData() {
+  const res = await fetch("/api/data/MOTOR_1");
+  const data = await res.json();
+
+  document.getElementById("vib").innerText = data.vibration ?? "--";
+  document.getElementById("sound").innerText = data.sound ?? "--";
+  document.getElementById("volt").innerText = data.voltage ?? "--";
+  document.getElementById("temp").innerText = data.temp ?? "--";
+  document.getElementById("hum").innerText = data.humidity ?? "--";
+}
+
+setInterval(fetchData, 500);
+</script>
+
+</body>
+</html>
