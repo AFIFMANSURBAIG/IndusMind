@@ -1,11 +1,13 @@
 const express = require("express");
 const cors = require("cors");
-
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public"));
 
-let motors = {
+const dataStore = {
   MOTOR_1: {},
   MOTOR_2: {}
 };
@@ -13,32 +15,26 @@ let motors = {
 // ESP32 sends data here
 app.post("/api/data", (req, res) => {
   const { device } = req.body;
-  if (device && motors[device]) {
-    motors[device] = req.body;
-    console.log("Data received:", req.body);
-  }
-  res.json({ status: "ok" });
+  if (!device) return res.status(400).send("No device");
+
+  dataStore[device] = req.body;
+  console.log("DATA:", req.body);
+  res.send("OK");
 });
 
-// Browser reads data here
+// Motor APIs
 app.get("/api/motor/:id", (req, res) => {
-  res.json(motors[req.params.id] || {});
+  res.json(dataStore[req.params.id] || {});
 });
 
 // Pages
-app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/index.html");
-});
+app.get("/motor1", (req, res) =>
+  res.sendFile(__dirname + "/public/motor1.html")
+);
+app.get("/motor2", (req, res) =>
+  res.sendFile(__dirname + "/public/motor2.html")
+);
 
-app.get("/motor1", (req, res) => {
-  res.sendFile(__dirname + "/public/motor1.html");
-});
-
-app.get("/motor2", (req, res) => {
-  res.sendFile(__dirname + "/public/motor2.html");
-});
-
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
-  console.log("IndusMind server running on port", PORT)
+  console.log("Server running on port", PORT)
 );

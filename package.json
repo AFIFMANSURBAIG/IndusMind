@@ -6,20 +6,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.19.2"
-  },
-  "description": "",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/AFIFMANSURBAIG/IndusMind.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/AFIFMANSURBAIG/IndusMind/issues"
-  },
-  "homepage": "https://github.com/AFIFMANSURBAIG/IndusMind#readme"
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
 }

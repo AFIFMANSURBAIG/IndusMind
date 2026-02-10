@@ -1,25 +1,11 @@
-<!DOCTYPE html>
-<html>
-<body>
 <h2>Motor 2</h2>
-
-<p>Vibration: <span id="v"></span></p>
-<p>Sound: <span id="s"></span></p>
-<p>Voltage: <span id="vol"></span></p>
-<p>Temp: <span id="t"></span></p>
-<p>Humidity: <span id="h"></span></p>
+<pre id="out">Loading...</pre>
 
 <script>
-async function load() {
-  const r = await fetch("/api/motor/MOTOR_1");
+setInterval(async () => {
+  const r = await fetch("/api/motor/MOTOR_2");
   const d = await r.json();
-  document.getElementById("v").innerText = d.vibration;
-  document.getElementById("s").innerText = d.sound;
-  document.getElementById("vol").innerText = d.voltage;
-  document.getElementById("t").innerText = d.temp;
-  document.getElementById("h").innerText = d.humidity;
-}
-setInterval(load, 1000);
+  document.getElementById("out").innerText =
+    JSON.stringify(d, null, 2);
+}, 1000);
 </script>
-</body>
-</html>
