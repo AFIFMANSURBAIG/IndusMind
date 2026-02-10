@@ -1,9 +1,25 @@
 <!DOCTYPE html>
 <html>
-<head><title>IndusMind</title></head>
+<head>
+  <title>IndusMind</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+    h1 { color: #333; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .nav { margin: 20px 0; }
+    .nav a { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px; }
+    .nav a:hover { background: #0056b3; }
+  </style>
+</head>
 <body>
-  <h1>🚀 IndusMind</h1>
-  <a href="/motor1">Motor 1</a><br><br>
-  <a href="/motor2">Motor 2</a>
+  <div class="container">
+    <h1>🚀 IndusMind - Motor Monitoring</h1>
+    <div class="nav">
+      <a href="/motor1">Motor 1 Dashboard</a>
+      <a href="/motor2">Motor 2 Dashboard</a>
+    </div>
+    <p>Click on a motor to view live sensor data and graphs.</p>
+  </div>
 </body>
 </html>

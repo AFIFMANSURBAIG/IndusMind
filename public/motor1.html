@@ -1,11 +1,208 @@
-<h2>Motor 1</h2>
-<pre id="out">Loading...</pre>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Motor 1 - IndusMind</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+    .container { max-width: 1400px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1 { color: #333; margin-top: 0; }
+    .back { display: inline-block; margin-bottom: 20px; padding: 8px 15px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; }
+    .back:hover { background: #5a6268; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 20px; }
+    .chart-container { background: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .chart-container h3 { margin-top: 0; color: #555; }
+    canvas { max-height: 250px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .stat-box { background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; }
+    .stat-label { font-size: 12px; color: #666; text-transform: uppercase; }
+    .stat-value { font-size: 24px; font-weight: bold; color: #007bff; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back">← Back to Dashboard</a>
+    <h1>Motor 1 - Live Sensor Data</h1>
+    
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-label">Vibration</div>
+        <div class="stat-value" id="stat-vib">--</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Sound (dB)</div>
+        <div class="stat-value" id="stat-sound">--</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Voltage (V)</div>
+        <div class="stat-value" id="stat-volt">--</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Temperature (°C)</div>
+        <div class="stat-value" id="stat-temp">--</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Humidity (%)</div>
+        <div class="stat-value" id="stat-hum">--</div>
+      </div>
+    </div>
 
-<script>
-setInterval(async () => {
-  const r = await fetch("/api/motor/MOTOR_1");
-  const d = await r.json();
-  document.getElementById("out").innerText =
-    JSON.stringify(d, null, 2);
-}, 1000);
-</script>
+    <div class="grid">
+      <div class="chart-container">
+        <h3>Vibration</h3>
+        <canvas id="vibChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>Sound Level</h3>
+        <canvas id="soundChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>Voltage</h3>
+        <canvas id="voltChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>Temperature</h3>
+        <canvas id="tempChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>Humidity</h3>
+        <canvas id="humChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const maxPoints = 30;
+    const chartData = {
+      vibration: [],
+      sound: [],
+      voltage: [],
+      temp: [],
+      humidity: []
+    };
+
+    const chartConfigs = {
+      vibChart: {
+        label: 'Vibration',
+        borderColor: '#e74c3c',
+        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+        key: 'vibration'
+      },
+      soundChart: {
+        label: 'Sound (dB)',
+        borderColor: '#3498db',
+        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+        key: 'sound'
+      },
+      voltChart: {
+        label: 'Voltage (V)',
+        borderColor: '#f39c12',
+        backgroundColor: 'rgba(243, 156, 18, 0.1)',
+        key: 'voltage'
+      },
+      tempChart: {
+        label: 'Temperature (°C)',
+        borderColor: '#e67e22',
+        backgroundColor: 'rgba(230, 126, 34, 0.1)',
+        key: 'temp'
+      },
+      humChart: {
+        label: 'Humidity (%)',
+        borderColor: '#27ae60',
+        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+        key: 'humidity'
+      }
+    };
+
+    const charts = {};
+
+    function initCharts() {
+      Object.keys(chartConfigs).forEach(chartId => {
+        const config = chartConfigs[chartId];
+        const ctx = document.getElementById(chartId).getContext('2d');
+        charts[chartId] = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: Array.from({length: maxPoints}, (_, i) => i + 1),
+            datasets: [{
+              label: config.label,
+              data: chartData[config.key],
+              borderColor: config.borderColor,
+              backgroundColor: config.backgroundColor,
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 3,
+              pointBackgroundColor: config.borderColor,
+              pointBorderColor: '#fff',
+              pointBorderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: true, position: 'top' },
+              filler: { propagate: true }
+            },
+            scales: {
+              x: { display: true },
+              y: { beginAtZero: false }
+            }
+          }
+        });
+      });
+    }
+
+    async function fetchData() {
+      try {
+        const res = await fetch("/api/motor/MOTOR_1");
+        const data = await res.json();
+        
+        // Update stats
+        document.getElementById('stat-vib').innerText = data.vibration ?? '--';
+        document.getElementById('stat-sound').innerText = data.sound ?? '--';
+        document.getElementById('stat-volt').innerText = data.voltage ?? '--';
+        document.getElementById('stat-temp').innerText = data.temp ?? '--';
+        document.getElementById('stat-hum').innerText = data.humidity ?? '--';
+
+        // Update charts
+        if (data.vibration !== undefined) {
+          chartData.vibration.push(data.vibration);
+          if (chartData.vibration.length > maxPoints) chartData.vibration.shift();
+        }
+        if (data.sound !== undefined) {
+          chartData.sound.push(data.sound);
+          if (chartData.sound.length > maxPoints) chartData.sound.shift();
+        }
+        if (data.voltage !== undefined) {
+          chartData.voltage.push(data.voltage);
+          if (chartData.voltage.length > maxPoints) chartData.voltage.shift();
+        }
+        if (data.temp !== undefined) {
+          chartData.temp.push(data.temp);
+          if (chartData.temp.length > maxPoints) chartData.temp.shift();
+        }
+        if (data.humidity !== undefined) {
+          chartData.humidity.push(data.humidity);
+          if (chartData.humidity.length > maxPoints) chartData.humidity.shift();
+        }
+
+        // Redraw charts
+        Object.keys(charts).forEach(chartId => {
+          const config = chartConfigs[chartId];
+          charts[chartId].data.datasets[0].data = chartData[config.key];
+          charts[chartId].update('none');
+        });
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      }
+    }
+
+    initCharts();
+    fetchData();
+    setInterval(fetchData, 500);
+  </script>
+</body>
+</html>
